@@ -1,97 +1,40 @@
 <?php
-/**
- * AcademicHub Nepal - eSewa Payment Success & Order Finalization
- * File: payment-success.php
- */
 require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/config/auth_check.php';
-
+require_once __DIR__ . '/config/payment_verification.php';
 require_login();
-
-$user_id = $_SESSION['user_id'];
-$is_verified = false;
-$error_msg = '';
 $order = null;
-$resource = null;
-
-// eSewa ePay V2 returns encoded Base64 string in ?data=...
-$encoded_data = $_GET['data'] ?? '';
-$demo_simulate = isset($_GET['demo_simulate']) && $_GET['demo_simulate'] == 1;
-
-$transaction_uuid = '';
-$transaction_code = '';
-$total_amount = '';
-$status = '';
-
-if (!empty($encoded_data)) {
-    // Decode base64 payload from eSewa
-    $decoded_json = base64_decode($encoded_data);
-    $response = json_decode($decoded_json, true);
-
-    if ($response && is_array($response)) {
-        $transaction_uuid = $response['transaction_uuid'] ?? '';
-        $transaction_code = $response['transaction_code'] ?? ('ESEWA-' . strtoupper(substr(md5(time()), 0, 8)));
-        $total_amount = $response['total_amount'] ?? 0;
-        $status = $response['status'] ?? '';
-
-        if ($status === 'COMPLETE') {
-            $is_verified = true;
-        }
-    }
-} elseif ($demo_simulate) {
-    // Fast-track demo simulation mode for testing
-    $transaction_uuid = $_GET['transaction_uuid'] ?? '';
-    $total_amount = $_GET['total_amount'] ?? 0;
-    $transaction_code = 'ESEWA-UAT-' . strtoupper(substr(uniqid(), -8));
-    $is_verified = true;
-}
-
-if (!empty($transaction_uuid)) {
+$error_msg = 'Payment could not be verified. Check your orders or contact support before paying again.';
+$encoded = $_GET['data'] ?? '';
+$decoded = is_string($encoded) && strlen($encoded) <= 16384 ? base64_decode($encoded, true) : false;
+$response = $decoded !== false ? json_decode($decoded, true) : null;
+if (is_array($response) && esewa_valid_signature($response)) {
     try {
-        // Fetch order from database
-        $stmt = $pdo->prepare("
-            SELECT o.*, r.title as resource_title, r.pages, r.file_format, r.campus, r.program, r.file_path 
-            FROM orders o
-            JOIN resources r ON o.resource_id = r.id
-            WHERE o.transaction_uuid = :uuid AND o.user_id = :uid
-            LIMIT 1
-        ");
-        $stmt->execute([':uuid' => $transaction_uuid, ':uid' => $user_id]);
-        $order = $stmt->fetch();
-
-        if ($order) {
-            if ($is_verified) {
-                // Update Order Status to PAID and store transaction code
-                $update_stmt = $pdo->prepare("
-                    UPDATE orders 
-                    SET payment_status = 'PAID', transaction_code = :txn_code 
-                    WHERE id = :order_id
-                ");
-                $update_stmt->execute([
-                    ':txn_code' => $transaction_code,
-                    ':order_id' => $order['id']
-                ]);
-
-                // Increment resource download/popularity counter
-                $pdo->prepare("UPDATE resources SET downloads_count = downloads_count + 1 WHERE id = :rid")
-                    ->execute([':rid' => $order['resource_id']]);
-
-                // Update local array
-                $order['payment_status'] = 'PAID';
-                $order['transaction_code'] = $transaction_code;
-            } else {
-                $error_msg = "eSewa returned a status other than COMPLETE ({$status}).";
+        $stmt = $pdo->prepare('SELECT o.*, r.title AS resource_title, r.pages, r.file_format, r.campus, r.program FROM orders o JOIN resources r ON r.id = o.resource_id WHERE o.transaction_uuid = :uuid AND o.user_id = :uid LIMIT 1');
+        $stmt->execute([':uuid' => $response['transaction_uuid'], ':uid' => $_SESSION['user_id']]);
+        $candidate = $stmt->fetch();
+        if ($candidate && esewa_verify_order($response, $candidate)) {
+            $pdo->beginTransaction();
+            $update = $pdo->prepare("UPDATE orders SET payment_status = 'PAID', transaction_code = :code WHERE id = :id AND payment_status IN ('PENDING', 'PENDING_VERIFICATION')");
+            $update->execute([':code' => $response['transaction_code'], ':id' => $candidate['id']]);
+            if ($update->rowCount() === 1) {
+                $pdo->prepare('UPDATE resources SET downloads_count = downloads_count + 1 WHERE id = :id')->execute([':id' => $candidate['resource_id']]);
+                security_audit('PAYMENT_VERIFIED', ['order_id' => $candidate['id']]);
+                $candidate['payment_status'] = 'PAID';
+                $candidate['transaction_code'] = $response['transaction_code'];
             }
+            $pdo->commit();
+            if ($candidate['payment_status'] === 'PAID' && $candidate['transaction_code'] === $response['transaction_code']) $order = $candidate;
         } else {
-            $error_msg = "Order with reference {$transaction_uuid} could not be located.";
+            security_audit('PAYMENT_REJECTED');
         }
-    } catch (Exception $e) {
-        $error_msg = "Database verification error: " . $e->getMessage();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        error_log('Payment verification: ' . $e->getMessage());
     }
 } else {
-    $error_msg = "No transaction verification data received.";
+    security_audit('PAYMENT_INVALID_CALLBACK');
 }
-
 $page_title = "Payment Successful | AcademicHub Nepal";
 require_once __DIR__ . '/includes/header.php';
 ?>

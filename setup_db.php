@@ -4,7 +4,8 @@
  * Allows instant verification and initialization on any XAMPP / MySQL installation.
  */
 
-require_once __DIR__ . '/config/config.php';
+require_once __DIR__ . '/config/auth_check.php';
+if (PHP_SAPI !== 'cli') { http_response_code(403); exit('Setup is available from the command line only.'); }
 
 $message = '';
 $status = 'info';
@@ -15,6 +16,8 @@ $dirs = [
     __DIR__ . '/uploads',
     __DIR__ . '/uploads/resources',
     __DIR__ . '/uploads/previews',
+    __DIR__ . '/uploads/avatars',
+    __DIR__ . '/uploads/receipts',
     __DIR__ . '/assets/images'
 ];
 foreach ($dirs as $dir) {
@@ -106,6 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         .btn-primary-hub:hover { background: #0284c7; border-color: #0284c7; color: #fff; }
         .credential-box { background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 10px; padding: 16px; margin-top: 20px; }
     </style>
+<link href="<?= BASE_URL ?>/assets/css/design-system.css?v=3" rel="stylesheet">
 </head>
 <body>
     <div class="container">
@@ -127,20 +131,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     <div class="text-center py-4">
                         <div class="text-success display-1 mb-3"><i class="bi bi-check-circle-fill"></i></div>
                         <h4 class="fw-bold text-success">Setup Completed Successfully!</h4>
-                        <p class="text-muted">The database schema has been executed, sample BBS, BBA, and BCA resources for Gyan Jyoti, Babai, and Gorkha campuses are loaded, and demo accounts are ready.</p>
+                        <p class="text-muted">The database schema has been executed, sample MBA, BBS, BBA, and Ma In Societies resources for Mark International College, Mahendra Multiple, Deukhuri Bahumukhi, and Babai campuses are loaded, and demo accounts are ready.</p>
                         
                         <div class="credential-box text-start my-4">
                             <h6 class="fw-bold text-dark mb-2"><i class="bi bi-key-fill me-2 text-primary"></i>Demo Access Credentials:</h6>
-                            <div class="row">
-                                <div class="col-sm-6 mb-2">
+                            <div class="row g-2">
+                                <div class="col-md-4 mb-2">
+                                    <span class="badge bg-danger mb-1"><i class="bi bi-shield-shaded me-1"></i>Super Admin</span>
+                                    <div class="small"><strong>Email:</strong> superadmin@gmail.com</div>
+                                    <div class="small"><strong>Password:</strong> 123456</div>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <span class="badge bg-dark mb-1">Standard Admin</span>
+                                    <div class="small"><strong>Email:</strong> admin@academichub.com</div>
+                                    <div class="small"><strong>Password:</strong> admin123</div>
+                                </div>
+                                <div class="col-md-4 mb-2">
                                     <span class="badge bg-primary mb-1">Student Account</span>
                                     <div class="small"><strong>Email:</strong> student@demo.com</div>
                                     <div class="small"><strong>Password:</strong> password123</div>
-                                </div>
-                                <div class="col-sm-6 mb-2">
-                                    <span class="badge bg-dark mb-1">Admin Panel</span>
-                                    <div class="small"><strong>Email:</strong> admin@academichub.com</div>
-                                    <div class="small"><strong>Password:</strong> admin123</div>
                                 </div>
                             </div>
                         </div>

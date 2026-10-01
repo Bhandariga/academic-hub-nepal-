@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b1e36"/>
+      <stop offset="50%" stop-color="#0f3d64"/>
+      <stop offset="100%" stop-color="#1e4976"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#818cf8"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Decorative Grid Pattern -->
+  <g opacity="0.06">
+    <circle cx="150" cy="150" r="120" stroke="#ffffff" stroke-width="2" fill="none"/>
+    <circle cx="1050" cy="480" r="160" stroke="#ffffff" stroke-width="2" fill="none"/>
+    <circle cx="950" cy="180" r="90" stroke="#ffffff" stroke-width="2" fill="none"/>
+  </g>
+
+  <!-- Badge -->
+  <rect x="100" y="90" width="340" height="42" rx="21" fill="rgba(56, 189, 248, 0.15)" stroke="#38bdf8" stroke-width="1.5"/>
+  <text x="125" y="117" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="700" fill="#38bdf8" letter-spacing="1">
+    🎓 TRIBHUVAN UNIVERSITY &amp; NEPAL
+  </text>
+
+  <!-- Brand Title -->
+  <text x="100" y="210" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="64" font-weight="800" fill="#ffffff" letter-spacing="-1">
+    AcademicHub Nepal
+  </text>
+
+  <!-- Tagline / Subtitle -->
+  <text x="100" y="275" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="30" font-weight="600" fill="url(#accent)">
+    Verified Project Reports, Notes &amp; Academic Research Platform
+  </text>
+
+  <!-- Description paragraph -->
+  <text x="100" y="340" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="400" fill="#94a3b8">
+    Instant access to BBS, BBA, BCA, MBS reference projects, questionnaires,
+  </text>
+  <text x="100" y="375" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="400" fill="#94a3b8">
+    APA 7th edition formatting templates, and professional thesis mentorship.
+  </text>
+
+  <!-- Feature Pills -->
+  <g transform="translate(100, 440)">
+    <!-- Pill 1 -->
+    <rect x="0" y="0" width="220" height="52" rx="14" fill="rgba(255, 255, 255, 0.08)" stroke="rgba(255, 255, 255, 0.2)"/>
+    <text x="24" y="32" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="18" font-weight="600" fill="#ffffff">
+      ✓ BBS 4th Year Projects
+    </text>
+
+    <!-- Pill 2 -->
+    <rect x="240" y="0" width="220" height="52" rx="14" fill="rgba(255, 255, 255, 0.08)" stroke="rgba(255, 255, 255, 0.2)"/>
+    <text x="264" y="32" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="18" font-weight="600" fill="#ffffff">
+      ✓ BBA Internship Reports
+    </text>
+
+    <!-- Pill 3 -->
+    <rect x="480" y="0" width="220" height="52" rx="14" fill="rgba(255, 255, 255, 0.08)" stroke="rgba(255, 255, 255, 0.2)"/>
+    <text x="504" y="32" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="18" font-weight="600" fill="#ffffff">
+      ✓ BCA UML &amp; Systems
+    </text>
+
+    <!-- Pill 4 -->
+    <rect x="720" y="0" width="240" height="52" rx="14" fill="rgba(255, 255, 255, 0.08)" stroke="rgba(255, 255, 255, 0.2)"/>
+    <text x="744" y="32" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="18" font-weight="600" fill="#ffffff">
+      ✓ Instant eSewa Unlock
+    </text>
+  </g>
+
+  <!-- Bottom Strip -->
+  <line x1="100" y1="540" x2="1100" y2="540" stroke="rgba(255, 255, 255, 0.15)" stroke-width="1"/>
+  <text x="100" y="580" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="18" font-weight="500" fill="#38bdf8">
+    academichub.com.np &bull; Kathmandu, Nepal
+  </text>
+  <text x="1100" y="580" text-anchor="end" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="18" font-weight="500" fill="#94a3b8">
+    Trusted by 10,000+ Students &amp; Researchers
+  </text>
+</svg>

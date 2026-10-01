@@ -19,7 +19,7 @@ require_once __DIR__ . '/includes/header.php';
                 </div>
                 <h2 class="fw-bold text-dark mb-2">Payment Failed or Cancelled</h2>
                 <p class="text-muted mb-4">
-                    Your eSewa transaction could not be completed or was cancelled. No amount was charged to your wallet.
+                    Your eSewa transaction could not be completed or was cancelled. Check your wallet and order status before attempting another payment.
                 </p>
 
                 <div class="bg-light p-3 rounded-3 border text-start small text-muted mb-4">

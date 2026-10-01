@@ -1,0 +1,13 @@
+# AcademicHub Nepal - Uploads Directory Protection
+# Prohibit execution of any server-side scripts in the uploads tree
+
+Options -Indexes
+<FilesMatch "(?i)\.(php[0-9]*|phtml|phar|phps|cgi|pl|py|exe|sh|bat)(\.|$)">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order Deny,Allow
+        Deny from all
+    </IfModule>
+</FilesMatch>

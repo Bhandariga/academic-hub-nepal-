@@ -19,36 +19,42 @@ $active_tab = 'overview';
 // 1. Handle Admin Profile Update (Name, Email / Admin ID, Phone)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_profile') {
     $active_tab = 'settings';
-    $name = trim($_POST['name'] ?? '');
-    $email = trim($_POST['email'] ?? '');
-    $phone = trim($_POST['phone'] ?? '');
-
-    if (empty($name) || empty($email)) {
-        $profile_msg = 'Name and Admin Email ID cannot be empty.';
-        $profile_status = 'danger';
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $profile_msg = 'Please provide a valid email format.';
+    if (!verify_csrf_token()) {
+        $profile_msg = 'Security token expired. Please try submitting again.';
         $profile_status = 'danger';
     } else {
-        try {
-            // Check if email taken by another account
-            $chk = $pdo->prepare("SELECT id FROM users WHERE email = :email AND id != :id LIMIT 1");
-            $chk->execute([':email' => $email, ':id' => $admin_id]);
-            if ($chk->fetch()) {
-                $profile_msg = 'This email address is already assigned to another user account.';
-                $profile_status = 'danger';
-            } else {
-                $upd = $pdo->prepare("UPDATE users SET name = :name, email = :email, phone = :phone WHERE id = :id");
-                $upd->execute([':name' => $name, ':email' => $email, ':phone' => $phone, ':id' => $admin_id]);
-                
-                $_SESSION['user_name'] = $name;
-                $_SESSION['user_email'] = $email;
-                $profile_msg = 'Admin profile & ID credentials updated successfully!';
-                $profile_status = 'success';
-            }
-        } catch (Exception $e) {
-            $profile_msg = 'Update failed: ' . $e->getMessage();
+        $name = trim($_POST['name'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $phone = trim($_POST['phone'] ?? '');
+
+        if (empty($name) || empty($email)) {
+            $profile_msg = 'Name and Admin Email ID cannot be empty.';
             $profile_status = 'danger';
+        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $profile_msg = 'Please provide a valid email format.';
+            $profile_status = 'danger';
+        } else {
+            try {
+                // Check if email taken by another account
+                $chk = $pdo->prepare("SELECT id FROM users WHERE email = :email AND id != :id LIMIT 1");
+                $chk->execute([':email' => $email, ':id' => $admin_id]);
+                if ($chk->fetch()) {
+                    $profile_msg = 'This email address is already assigned to another user account.';
+                    $profile_status = 'danger';
+                } else {
+                    $upd = $pdo->prepare("UPDATE users SET name = :name, email = :email, phone = :phone WHERE id = :id");
+                    $upd->execute([':name' => $name, ':email' => $email, ':phone' => $phone, ':id' => $admin_id]);
+                    
+                    $_SESSION['user_name'] = $name;
+                    $_SESSION['user_email'] = $email;
+                    log_admin_activity($pdo, 'UPDATE_SELF_PROFILE', "Updated personal credentials to {$email}");
+                    $profile_msg = 'Admin profile & ID credentials updated successfully!';
+                    $profile_status = 'success';
+                }
+            } catch (Exception $e) {
+                $profile_msg = 'Update failed: ' . safe_error_message($e);
+                $profile_status = 'danger';
+            }
         }
     }
 }
@@ -56,47 +62,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 // 2. Handle Admin Password Change
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'change_password') {
     $active_tab = 'settings';
-    $current_pwd = $_POST['current_password'] ?? '';
-    $new_pwd = $_POST['new_password'] ?? '';
-    $confirm_pwd = $_POST['confirm_password'] ?? '';
-
-    if (empty($current_pwd) || empty($new_pwd) || empty($confirm_pwd)) {
-        $pwd_msg = 'Please fill out all password fields.';
-        $pwd_status = 'danger';
-    } elseif (strlen($new_pwd) < 6) {
-        $pwd_msg = 'New password must be at least 6 characters long.';
-        $pwd_status = 'danger';
-    } elseif ($new_pwd !== $confirm_pwd) {
-        $pwd_msg = 'New password and confirmation do not match.';
+    if (!verify_csrf_token()) {
+        $pwd_msg = 'Security token expired. Please try submitting again.';
         $pwd_status = 'danger';
     } else {
-        try {
-            // Verify current password
-            $st = $pdo->prepare("SELECT password FROM users WHERE id = :id LIMIT 1");
-            $st->execute([':id' => $admin_id]);
-            $admin_record = $st->fetch();
+        $current_pwd = $_POST['current_password'] ?? '';
+        $new_pwd = $_POST['new_password'] ?? '';
+        $confirm_pwd = $_POST['confirm_password'] ?? '';
 
-            $is_current_valid = false;
-            if ($admin_record) {
-                if (password_verify($current_pwd, $admin_record['password']) || $current_pwd === 'admin123') {
-                    $is_current_valid = true;
-                }
-            }
-
-            if (!$is_current_valid) {
-                $pwd_msg = 'The current password you entered is incorrect.';
-                $pwd_status = 'danger';
-            } else {
-                $new_hash = password_hash($new_pwd, PASSWORD_BCRYPT);
-                $upd_pwd = $pdo->prepare("UPDATE users SET password = :p WHERE id = :id");
-                $upd_pwd->execute([':p' => $new_hash, ':id' => $admin_id]);
-
-                $pwd_msg = 'Your administrator password has been updated successfully!';
-                $pwd_status = 'success';
-            }
-        } catch (Exception $e) {
-            $pwd_msg = 'Password change failed: ' . $e->getMessage();
+        if (empty($current_pwd) || empty($new_pwd) || empty($confirm_pwd)) {
+            $pwd_msg = 'Please fill out all password fields.';
             $pwd_status = 'danger';
+        } elseif (strlen($new_pwd) < 6) {
+            $pwd_msg = 'New password must be at least 6 characters long.';
+            $pwd_status = 'danger';
+        } elseif ($new_pwd !== $confirm_pwd) {
+            $pwd_msg = 'New password and confirmation do not match.';
+            $pwd_status = 'danger';
+        } else {
+            try {
+                // Verify current password
+                $st = $pdo->prepare("SELECT password FROM users WHERE id = :id LIMIT 1");
+                $st->execute([':id' => $admin_id]);
+                $admin_record = $st->fetch();
+
+                $is_current_valid = false;
+                if ($admin_record) {
+                    if (password_verify($current_pwd, $admin_record['password'])) {
+                        $is_current_valid = true;
+                    }
+                }
+
+                if (!$is_current_valid) {
+                    $pwd_msg = 'The current password you entered is incorrect.';
+                    $pwd_status = 'danger';
+                } else {
+                    $new_hash = password_hash($new_pwd, PASSWORD_BCRYPT);
+                    $upd_pwd = $pdo->prepare("UPDATE users SET password = :p WHERE id = :id");
+                    $upd_pwd->execute([':p' => $new_hash, ':id' => $admin_id]);
+
+                    log_admin_activity($pdo, 'CHANGE_SELF_PWD', 'Administrator updated personal login password');
+                    $pwd_msg = 'Your administrator password has been updated successfully!';
+                    $pwd_status = 'success';
+                }
+            } catch (Exception $e) {
+                $pwd_msg = 'Password change failed: ' . safe_error_message($e);
+                $pwd_status = 'danger';
+            }
         }
     }
 }
@@ -116,6 +128,9 @@ try {
     $total_resources = $pdo->query("SELECT COUNT(*) FROM resources")->fetchColumn();
     $total_orders = $pdo->query("SELECT COUNT(*) FROM orders")->fetchColumn();
     $total_sales = $pdo->query("SELECT COALESCE(SUM(amount), 0) FROM orders WHERE payment_status = 'PAID'")->fetchColumn();
+    $total_admins = $pdo->query("SELECT COUNT(*) FROM users WHERE role IN ('admin', 'superadmin')")->fetchColumn();
+    $pending_qr = (int)$pdo->query("SELECT COUNT(*) FROM orders WHERE payment_status = 'PENDING_VERIFICATION'")->fetchColumn();
+
 
     $stmt_recent_orders = $pdo->query("
         SELECT o.*, u.name as student_name, u.email as student_email, r.title as resource_title, r.campus, r.program
@@ -129,7 +144,7 @@ try {
     $service_requests = $pdo->query("SELECT * FROM service_requests ORDER BY id DESC LIMIT 5")->fetchAll();
     $pending_services = $pdo->query("SELECT COUNT(*) FROM service_requests WHERE status = 'Pending'")->fetchColumn();
 } catch (Exception $e) {
-    die("Database query error: " . $e->getMessage());
+    die("Database query error: " . safe_error_message($e));
 }
 ?>
 <!DOCTYPE html>
@@ -141,78 +156,25 @@ try {
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Bootstrap 5 & Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <link href="<?= BASE_URL ?>/assets/css/style.css" rel="stylesheet">
+<link href="<?= BASE_URL ?>/assets/css/design-system.css?v=3" rel="stylesheet">
+<link href="<?= BASE_URL ?>/assets/css/experience.css?v=4" rel="stylesheet">
+<link href="<?= BASE_URL ?>/assets/css/studio.css?v=1" rel="stylesheet">
+<link href="<?= BASE_URL ?>/assets/css/platform.css?v=2" rel="stylesheet">
+<script src="<?= BASE_URL ?>/assets/js/theme.js?v=1"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><link href="<?= BASE_URL ?>/assets/css/admin-enterprise.css?v=1" rel="stylesheet"><script src="<?= BASE_URL ?>/assets/js/admin-ui.js?v=1" defer></script>
 </head>
-<body class="bg-light">
+<body class="hub-admin bg-light">
 
 <div class="container-fluid p-0">
     <div class="row g-0">
         <!-- 1. Left Sidebar Navigation -->
-        <div class="col-md-3 col-lg-2 p-0 admin-sidebar d-flex flex-column" style="position: sticky; top: 0; height: 100vh; overflow-y: auto;">
-            <!-- Brand Header -->
-            <div class="p-3 border-bottom border-secondary border-opacity-25 d-flex align-items-center gap-3">
-                <div class="hub-icon bg-info text-dark rounded-3 shadow-sm" style="width:38px;height:38px;display:flex;align-items:center;justify-content:center;">
-                    <i class="bi bi-mortarboard-fill fs-5"></i>
-                </div>
-                <div>
-                    <h6 class="fw-bold text-white mb-0 lh-1">AcademicHub</h6>
-                    <span class="badge bg-info bg-opacity-25 text-info mt-1" style="font-size:0.65rem; letter-spacing: 0.05em;">ADMIN CONSOLE</span>
-                </div>
-            </div>
+        <?php $active_page = 'dashboard'; require_once __DIR__ . '/sidebar.php'; ?>
 
-            <!-- Nav Links -->
-            <div class="p-3 flex-grow-1">
-                <div class="small text-uppercase fw-bold text-white-50 mb-2" style="font-size:0.7rem; letter-spacing:0.08em;">Core Management</div>
-                <a href="#tab-overview" class="active" data-bs-toggle="pill" data-bs-target="#tab-overview">
-                    <i class="bi bi-grid-1x2-fill"></i> Overview
-                </a>
-                <a href="<?= BASE_URL ?>/admin/add-resource.php">
-                    <i class="bi bi-cloud-arrow-up-fill"></i> Add Resource
-                </a>
-                <a href="<?= BASE_URL ?>/admin/manage-resource.php">
-                    <i class="bi bi-journals"></i> Manage Resources
-                </a>
-                <a href="<?= BASE_URL ?>/admin/manage-orders.php">
-                    <i class="bi bi-cart-check-fill"></i> Manage Orders
-                </a>
-                <a href="<?= BASE_URL ?>/admin/manage-students.php">
-                    <i class="bi bi-people-fill"></i> Manage Students
-                </a>
-                <a href="<?= BASE_URL ?>/admin/sales-reports.php">
-                    <i class="bi bi-bar-chart-fill"></i> Sales Reports
-                </a>
-
-                <div class="small text-uppercase fw-bold text-white-50 mt-4 mb-2" style="font-size:0.7rem; letter-spacing:0.08em;">Account &amp; Security</div>
-                <a href="#tab-settings" data-bs-toggle="pill" data-bs-target="#tab-settings" id="sidebarSettingsLink">
-                    <i class="bi bi-shield-lock-fill"></i> ID &amp; Password Settings
-                </a>
-
-                <hr class="border-secondary border-opacity-25 my-3">
-                <a href="<?= BASE_URL ?>/index.php" target="_blank" class="text-white-50">
-                    <i class="bi bi-box-arrow-up-right"></i> View Public Site
-                </a>
-            </div>
-
-            <!-- Logged Admin Bottom Profile -->
-            <div class="p-3 border-top border-secondary border-opacity-25 bg-black bg-opacity-20">
-                <div class="d-flex align-items-center gap-2 mb-2">
-                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 34px; height: 34px; font-size: 0.85rem;">
-                        <?= strtoupper(substr($current_admin['name'], 0, 1)) ?>
-                    </div>
-                    <div class="overflow-hidden">
-                        <div class="fw-bold text-light small text-truncate"><?= htmlspecialchars($current_admin['name']) ?></div>
-                        <div class="text-white-50 text-truncate" style="font-size: 0.72rem;"><?= htmlspecialchars($current_admin['email']) ?></div>
-                    </div>
-                </div>
-                <a href="<?= BASE_URL ?>/admin/logout.php" class="btn btn-outline-danger btn-sm w-100 py-1 d-flex align-items-center justify-content-center gap-2">
-                    <i class="bi bi-box-arrow-right"></i> Log Out
-                </a>
-            </div>
-        </div>
 
         <!-- 2. Main Executive Content Area -->
         <div class="col-md-9 col-lg-10 p-4 p-md-5">
@@ -228,16 +190,10 @@ try {
                             <li class="breadcrumb-item active" aria-current="page">Admin Console</li>
                         </ol>
                     </nav>
-                    <h2 class="h3 fw-bold text-dark mb-0">Platform Operations &amp; Intelligence</h2>
+                    <h2 class="h3 fw-bold text-dark mb-0">Dashboard overview</h2>
                 </div>
 
                 <div class="d-flex align-items-center gap-3 mt-3 mt-md-0">
-                    <div class="bg-white border rounded-pill px-3 py-2 small shadow-sm d-flex align-items-center gap-2">
-                        <span class="p-1 bg-success rounded-circle"></span>
-                        <span class="text-muted fw-semibold">eSewa UAT Sandbox:</span>
-                        <strong class="text-success">Connected</strong>
-                    </div>
-
                     <a href="<?= BASE_URL ?>/admin/add-resource.php" class="btn btn-hub-primary rounded-pill px-4 shadow-sm">
                         <i class="bi bi-plus-circle-fill me-1"></i> Upload Resource
                     </a>
@@ -268,8 +224,59 @@ try {
                 
                 <!-- TAB 1: OVERVIEW & KPIS -->
                 <div class="tab-pane fade <?= $active_tab === 'overview' ? 'show active' : '' ?>" id="tab-overview" role="tabpanel">
+                    <?php require __DIR__ . '/../includes/admin-analytics.php'; ?>
+                    
+                    <?php if (is_superadmin()): ?>
+                        <!-- Super Admin Sovereignty Command Center -->
+                        <div class="card border-0 rounded-4 p-4 mb-4 text-white shadow-sm" style="background: linear-gradient(135deg, #0f1f33 0%, #172a45 100%); border-left: 5px solid #f59e0b !important;">
+                            <div class="row align-items-center">
+                                <div class="col-lg-8">
+                                    <div class="d-flex align-items-center gap-2 mb-2">
+                                        <span class="badge bg-warning bg-opacity-25 text-warning border border-warning border-opacity-50 px-3 py-1 rounded-pill">
+                                            <i class="bi bi-shield-fill-check me-1"></i>SUPER ADMIN WORKSPACE
+                                        </span>
+                                        <span class="badge bg-white bg-opacity-10 text-white-50 px-2 py-1 rounded-pill">
+                                            <?= $total_admins ?> Total Operators
+                                        </span>
+                                    </div>
+                                    <h4 class="fw-bold text-white mb-1">Administrative Role Governance Active</h4>
+                                    <p class="text-white-50 small mb-0">
+                                        As Chief Super Administrator, you possess absolute authority to provision staff accounts, assign granular role capabilities, suspend rogue admins, and review the immutable security audit trail.
+                                    </p>
+                                </div>
+                                <div class="col-lg-4 text-lg-end mt-3 mt-lg-0 d-flex flex-wrap justify-content-lg-end gap-2">
+                                    <a href="<?= BASE_URL ?>/admin/manage-admins.php" class="btn btn-warning rounded-pill px-3 py-2 fw-bold shadow-sm d-inline-flex align-items-center gap-2 text-dark">
+                                        <i class="bi bi-person-gear"></i> Admins &amp; Roles
+                                    </a>
+                                    <a href="<?= BASE_URL ?>/admin/manage-team.php" class="btn btn-outline-light rounded-pill px-3 py-2 fw-semibold shadow-sm d-inline-flex align-items-center gap-2">
+                                        <i class="bi bi-people-fill text-warning"></i> Team Members
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if ($pending_qr > 0): ?>
+                        <!-- Pending QR Verifications Alert Banner -->
+                        <div class="alert alert-warning border-0 rounded-4 shadow-sm p-4 mb-4 d-flex flex-wrap align-items-center justify-content-between gap-3 bg-warning-subtle text-dark">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="bg-warning text-dark p-3 rounded-circle fs-3 shadow-sm">
+                                    <i class="bi bi-qr-code-scan"></i>
+                                </div>
+                                <div>
+                                    <h5 class="fw-bold mb-1">Attention: <?= $pending_qr ?> eSewa QR Payment(s) Awaiting Verification</h5>
+                                    <p class="mb-0 small text-muted">Students have scanned your eSewa QR code and submitted their Transaction IDs. Verify to unlock their downloads.</p>
+                                </div>
+                            </div>
+                            <a href="<?= BASE_URL ?>/admin/manage-orders.php?status=PENDING_VERIFICATION" class="btn btn-warning text-dark fw-bold rounded-pill px-4 shadow-sm">
+                                Verify Orders Now <i class="bi bi-arrow-right ms-1"></i>
+                            </a>
+                        </div>
+                    <?php endif; ?>
+
                     <!-- KPI Cards Grid -->
                     <div class="row g-4 mb-4">
+
                         <!-- Revenue -->
                         <div class="col-sm-6 col-xl-3">
                             <div class="admin-kpi-card kpi-revenue">
@@ -327,6 +334,10 @@ try {
                         </div>
                     </div>
 
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6"><div class="admin-kpi-card"><div class="d-flex justify-content-between"><span class="small text-muted">Pending service requests</span><i class="bi bi-headset text-primary"></i></div><div class="h3 mt-3"><?= number_format($pending_services) ?></div><a class="small" href="#tab-inquiries">Review service requests →</a></div></div>
+                        <div class="col-md-6"><div class="admin-kpi-card"><div class="d-flex justify-content-between"><span class="small text-muted">Payments awaiting verification</span><i class="bi bi-clock-history text-warning"></i></div><div class="h3 mt-3"><?= number_format($pending_qr) ?></div><a class="small" href="<?= BASE_URL ?>/admin/manage-orders.php">Review payment activity →</a></div></div>
+                    </div>
                     <!-- Recent Transactions & Quick Actions -->
                     <div class="row g-4 mb-4">
                         <div class="col-xl-8">
@@ -371,11 +382,21 @@ try {
                                                             <td class="fw-bold small"><?= format_npr($ord['amount']) ?></td>
                                                             <td>
                                                                 <?php if ($ord['payment_status'] === 'PAID'): ?>
-                                                                    <span class="badge bg-success-subtle text-success border border-success px-2 py-1">PAID</span>
+                                                                    <span class="badge bg-success-subtle text-success border border-success px-2 py-1">
+                                                                        <i class="bi bi-check-circle-fill me-1"></i> PAID
+                                                                    </span>
+                                                                <?php elseif ($ord['payment_status'] === 'PENDING_VERIFICATION'): ?>
+                                                                    <span class="badge bg-warning-subtle text-warning border border-warning px-2 py-1">
+                                                                        <i class="bi bi-hourglass-split me-1"></i> QR VERIFY
+                                                                    </span>
                                                                 <?php elseif ($ord['payment_status'] === 'PENDING'): ?>
-                                                                    <span class="badge bg-warning-subtle text-warning border border-warning px-2 py-1">PENDING</span>
+                                                                    <span class="badge bg-warning-subtle text-warning border border-warning px-2 py-1">
+                                                                        <i class="bi bi-clock-history me-1"></i> PENDING
+                                                                    </span>
                                                                 <?php else: ?>
-                                                                    <span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1">FAILED</span>
+                                                                    <span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1">
+                                                                        <i class="bi bi-x-circle me-1"></i> FAILED
+                                                                    </span>
                                                                 <?php endif; ?>
                                                             </td>
                                                             <td class="text-end pe-4">
@@ -415,7 +436,7 @@ try {
                                         <i class="bi bi-graph-up-arrow fs-5 text-secondary"></i>
                                         <div>
                                             <div class="fw-bold small">Campus Analytics</div>
-                                            <div class="text-muted" style="font-size: 0.72rem;">Review Gyan Jyoti, Babai, Gorkha sales</div>
+                                            <div class="text-muted" style="font-size: 0.72rem;">Review Mark, Mahendra, Deukhuri, Babai sales</div>
                                         </div>
                                     </a>
                                     <button type="button" class="btn btn-outline-dark text-start p-2 rounded-3 d-flex align-items-center gap-2" onclick="document.getElementById('settings-tab').click();">
@@ -468,6 +489,7 @@ try {
                                 <?php endif; ?>
 
                                 <form action="" method="POST">
+                                    <?= csrf_field() ?>
                                     <input type="hidden" name="action" value="update_profile">
 
                                     <div class="mb-3">
@@ -520,7 +542,9 @@ try {
                                 <?php endif; ?>
 
                                 <form action="" method="POST">
+                                    <?= csrf_field() ?>
                                     <input type="hidden" name="action" value="change_password">
+
 
                                     <div class="mb-3">
                                         <label class="form-label small fw-bold text-muted">Current Password *</label>
@@ -646,5 +670,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
+<script src="<?= BASE_URL ?>/assets/js/experience.js?v=5"></script>
 </body>
 </html>

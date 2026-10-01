@@ -1,0 +1,33 @@
+# ==========================================
+# Academic Hub Nepal - Git Ignore
+# ==========================================
+
+# Environment / Secret Files
+.env
+.env.local
+.env.production
+
+# Logs
+logs/
+*.log
+
+# User Uploaded Files
+uploads/avatars/*
+uploads/receipts/*
+uploads/team/*
+uploads/resources/*
+
+# Keep .htaccess Security Files
+!uploads/.htaccess
+!uploads/avatars/.htaccess
+!uploads/receipts/.htaccess
+!uploads/team/.htaccess
+!uploads/resources/.htaccess
+
+# Editor Files
+.vscode/
+.idea/
+
+# Operating System Files
+.DS_Store
+Thumbs.db

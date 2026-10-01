@@ -7,6 +7,28 @@ require_once __DIR__ . '/config/config.php';
 require_once __DIR__ . '/config/auth_check.php';
 
 $page_title = "About Us & Academic Integrity Policies | AcademicHub Nepal";
+$page_description = "Learn about AcademicHub Nepal's mission, Tribhuvan University curriculum alignment, verified research ethics, formatting standards, and student support.";
+$page_keywords = "About AcademicHub Nepal, TU academic platform, Nepal student research guidelines, academic integrity policy Nepal, Tribhuvan University syllabus standards";
+$canonical_url = BASE_URL . "/about.php";
+
+$page_breadcrumbs = [
+    ['name' => 'Home', 'url' => BASE_URL . '/index.php'],
+    ['name' => 'About Us', 'url' => $canonical_url]
+];
+
+$page_schema = [
+    "@context" => "https://schema.org",
+    "@type" => "AboutPage",
+    "name" => "About AcademicHub Nepal & Academic Standards",
+    "url" => $canonical_url,
+    "description" => $page_description,
+    "mainEntity" => [
+        "@type" => "EducationalOrganization",
+        "name" => "AcademicHub Nepal",
+        "url" => BASE_URL
+    ]
+];
+
 require_once __DIR__ . '/includes/header.php';
 ?>
 
@@ -30,7 +52,7 @@ require_once __DIR__ . '/includes/header.php';
                             <i class="bi bi-mortarboard-fill"></i>
                         </div>
                         <h5 class="fw-bold">Campus Relevance</h5>
-                        <p class="small text-muted mb-0">Directly cataloged for Tribhuvan University colleges (Gyan Jyoti, Babai, Gorkha) so students reference exact syllabus formats.</p>
+                        <p class="small text-muted mb-0">Directly cataloged for Tribhuvan University colleges (Mark International, Mahendra Multiple, Deukhuri Bahumukhi, Babai) so students reference exact syllabus formats.</p>
                     </div>
                 </div>
                 <div class="col-md-4">

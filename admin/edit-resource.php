@@ -6,7 +6,10 @@
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/auth_check.php';
 
+require_once __DIR__ . '/../config/uploads.php';
+require_once __DIR__ . '/../config/resource_media.php';
 require_admin();
+require_admin_permission('manage_resources');
 
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
@@ -21,61 +24,56 @@ try {
         exit;
     }
 } catch (Exception $e) {
-    die("Error: " . $e->getMessage());
+    die("Error: " . safe_error_message($e));
 }
 
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $title = trim($_POST['title'] ?? '');
-    $description = trim($_POST['description'] ?? '');
-    $campus = trim($_POST['campus'] ?? '');
-    $program = trim($_POST['program'] ?? '');
-    $year = trim($_POST['year'] ?? '');
-    $subject = trim($_POST['subject'] ?? '');
-    $document_type = trim($_POST['document_type'] ?? '');
-    $pages = (int)($_POST['pages'] ?? 1);
-    $file_format = trim($_POST['file_format'] ?? 'PDF');
-    $price = (float)($_POST['price'] ?? 0);
-    $featured = isset($_POST['featured']) ? 1 : 0;
+    if (!verify_csrf_token()) {
+        $error = 'Security session validation expired. Please re-submit.';
+    } else {
+        $title = trim($_POST['title'] ?? '');
+        $description = trim($_POST['description'] ?? '');
+        $keywords = trim($_POST['keywords'] ?? '');
+        $campus = trim($_POST['campus'] ?? '');
+        $program = trim($_POST['program'] ?? '');
+        $year = trim($_POST['year'] ?? '');
+        $subject = trim($_POST['subject'] ?? '');
+        $document_type = trim($_POST['document_type'] ?? '');
+        $pages = (int)($_POST['pages'] ?? 1);
+        $file_format = trim($_POST['file_format'] ?? 'PDF');
+        $price = (float)($_POST['price'] ?? 0);
+        $featured = isset($_POST['featured']) ? 1 : 0;
+        $visibility = trim($_POST['visibility'] ?? 'public');
+        $status = trim($_POST['status'] ?? 'published');
+        $display_order = (int)($_POST['display_order'] ?? 0);
+
 
     $file_name = $resource['file_path'];
     $preview_name = $resource['preview_image'];
 
-    // Handle new master file if uploaded
-    if (isset($_FILES['resource_file']) && $_FILES['resource_file']['error'] === UPLOAD_ERR_OK) {
-        $allowedExtensions = ['pdf', 'docx', 'doc', 'zip', 'pptx'];
-        $fileExt = strtolower(pathinfo($_FILES['resource_file']['name'], PATHINFO_EXTENSION));
-
-        if (in_array($fileExt, $allowedExtensions)) {
-            $cleanTitle = preg_replace('/[^a-zA-Z0-9_-]/', '_', strtolower(substr($title, 0, 30)));
-            $file_name = time() . '_' . $cleanTitle . '.' . $fileExt;
-            move_uploaded_file($_FILES['resource_file']['tmp_name'], RESOURCE_FILE_DIR . $file_name);
-        }
-    }
-
-    // Handle new preview image if uploaded
-    if (isset($_FILES['preview_image']) && $_FILES['preview_image']['error'] === UPLOAD_ERR_OK) {
-        $allowedImgExt = ['jpg', 'jpeg', 'png', 'webp'];
-        $imgExt = strtolower(pathinfo($_FILES['preview_image']['name'], PATHINFO_EXTENSION));
-        if (in_array($imgExt, $allowedImgExt)) {
-            $preview_name = 'prev_' . time() . '.' . $imgExt;
-            move_uploaded_file($_FILES['preview_image']['tmp_name'], PREVIEW_IMAGE_DIR . $preview_name);
-        }
-    }
-
     try {
+        if ($title === '' || $campus === '' || $program === '' || $subject === '' || $price < 0 || $pages < 1) {
+            throw new RuntimeException('Please enter valid required fields, page count and price.');
+        }
+        if (($_FILES['resource_file']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+            $file_name = store_validated_upload($_FILES['resource_file'], RESOURCE_FILE_DIR);
+        }
+        $preview_name = resource_cover($pdo,$title,$preview_name);
         $update_stmt = $pdo->prepare("
             UPDATE resources 
-            SET title = :title, description = :description, campus = :campus, program = :program,
+            SET title = :title, description = :description, keywords = :keywords, campus = :campus, program = :program,
                 year = :year, subject = :subject, document_type = :document_type, pages = :pages,
                 file_format = :file_format, price = :price, file_path = :file_path, 
-                preview_image = :preview_image, featured = :featured
+                preview_image = :preview_image, featured = :featured, visibility = :visibility,
+                status = :status, display_order = :display_order
             WHERE id = :id
         ");
         $update_stmt->execute([
             ':title' => $title,
             ':description' => $description,
+            ':keywords' => $keywords,
             ':campus' => $campus,
             ':program' => $program,
             ':year' => $year,
@@ -87,16 +85,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':file_path' => $file_name,
             ':preview_image' => $preview_name,
             ':featured' => $featured,
+            ':visibility' => $visibility,
+            ':status' => $status,
+            ':display_order' => $display_order,
             ':id' => $id
         ]);
 
+        log_admin_activity($pdo, 'EDIT_RESOURCE', "Updated resource #{$id} ({$title})", 'resource', $id);
         set_flash_message('success', 'Resource details updated successfully.');
         header('Location: ' . BASE_URL . '/admin/manage-resource.php');
         exit;
     } catch (Exception $e) {
-        $error = 'Update failed: ' . $e->getMessage();
+        $error = 'Update failed: ' . safe_error_message($e);
     }
 }
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -108,8 +112,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <link href="<?= BASE_URL ?>/assets/css/style.css" rel="stylesheet">
+<link href="<?= BASE_URL ?>/assets/css/design-system.css?v=3" rel="stylesheet">
+<link href="<?= BASE_URL ?>/assets/css/experience.css?v=4" rel="stylesheet">
+<link href="<?= BASE_URL ?>/assets/css/studio.css?v=1" rel="stylesheet">
+<link href="<?= BASE_URL ?>/assets/css/platform.css?v=2" rel="stylesheet">
+<script src="<?= BASE_URL ?>/assets/js/theme.js?v=1"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><link href="<?= BASE_URL ?>/assets/css/admin-enterprise.css?v=1" rel="stylesheet"><script src="<?= BASE_URL ?>/assets/js/admin-ui.js?v=1" defer></script>
 </head>
-<body class="bg-light">
+<body class="hub-admin bg-light">
 
 <div class="container-fluid p-0">
     <div class="row g-0">
@@ -139,7 +149,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 bg-white">
                 <form action="" method="POST" enctype="multipart/form-data">
+                    <?= csrf_field() ?>
                     <div class="mb-3">
+
                         <label class="form-label small fw-bold text-muted">Resource Title *</label>
                         <input type="text" name="title" class="form-control" value="<?= htmlspecialchars($resource['title']) ?>" required>
                     </div>
@@ -148,7 +160,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-muted">Campus *</label>
                             <select name="campus" class="form-select" required>
-                                <option value="Gyan Jyoti Campus" <?= $resource['campus'] === 'Gyan Jyoti Campus' ? 'selected' : '' ?>>Gyan Jyoti Campus</option>
+                                <option value="Mark International College" <?= $resource['campus'] === 'Mark International College' ? 'selected' : '' ?>>Mark International College</option>
+                                <option value="Mahendra Multiple Campus" <?= $resource['campus'] === 'Mahendra Multiple Campus' ? 'selected' : '' ?>>Mahendra Multiple Campus</option>
+                                <option value="Deukhuri Bahumukhi Campus" <?= $resource['campus'] === 'Deukhuri Bahumukhi Campus' ? 'selected' : '' ?>>Deukhuri Bahumukhi Campus</option>
                                 <option value="Babai Campus" <?= $resource['campus'] === 'Babai Campus' ? 'selected' : '' ?>>Babai Campus</option>
                                 <option value="Gorkha Campus" <?= $resource['campus'] === 'Gorkha Campus' ? 'selected' : '' ?>>Gorkha Campus</option>
                                 <option value="Other Campuses" <?= $resource['campus'] === 'Other Campuses' ? 'selected' : '' ?>>Other Campus (Tribhuvan University)</option>
@@ -159,7 +173,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <select name="program" class="form-select" required>
                                 <option value="BBS" <?= $resource['program'] === 'BBS' ? 'selected' : '' ?>>BBS</option>
                                 <option value="BBA" <?= $resource['program'] === 'BBA' ? 'selected' : '' ?>>BBA</option>
-                                <option value="BCA" <?= $resource['program'] === 'BCA' ? 'selected' : '' ?>>BCA</option>
+                                <option value="Ma In Societies" <?= $resource['program'] === 'Ma In Societies' ? 'selected' : '' ?>>Ma In Societies</option>
                                 <option value="MBS" <?= $resource['program'] === 'MBS' ? 'selected' : '' ?>>MBS</option>
                                 <option value="MBA" <?= $resource['program'] === 'MBA' ? 'selected' : '' ?>>MBA</option>
                             </select>
@@ -201,6 +215,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <textarea name="description" class="form-control" rows="4" required><?= htmlspecialchars($resource['description']) ?></textarea>
                     </div>
 
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-muted">Keywords / Tags (Optional)</label>
+                        <input type="text" name="keywords" class="form-control" value="<?= htmlspecialchars($resource['keywords'] ?? '') ?>" placeholder="e.g. finance, banking, ratio analysis, SPSS (comma-separated)">
+                        <div class="form-text small text-muted">Add relevant keywords to improve search visibility</div>
+                    </div>
+
                     <div class="row g-3 mb-4">
                         <div class="col-md-6">
                             <div class="p-3 bg-light rounded border">
@@ -212,17 +232,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="col-md-6">
                             <div class="p-3 bg-light rounded border">
                                 <label class="form-label small fw-bold text-dark d-block">Replace Preview Image</label>
-                                <input type="file" name="preview_image" class="form-control mb-1">
+                                <input type="file" name="preview_image" class="form-control mb-1" accept="image/jpeg,image/png,image/webp" data-optimize-image>
+                                <?php resource_media_picker($pdo); ?>
                                 <span class="small text-muted">Current preview: <code><?= htmlspecialchars($resource['preview_image']) ?></code></span>
                             </div>
                         </div>
                     </div>
 
-                    <div class="form-check mb-4">
+                    <div class="form-check mb-3">
                         <input class="form-check-input" type="checkbox" name="featured" id="featuredEdit" <?= $resource['featured'] ? 'checked' : '' ?>>
                         <label class="form-check-label small fw-semibold text-dark" for="featuredEdit">
                             Show as Featured Resource on Home Page
                         </label>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted">Visibility</label>
+                            <select name="visibility" class="form-select">
+                                <option value="public" <?= ($resource['visibility'] ?? 'public') === 'public' ? 'selected' : '' ?>>Public (Visible to all)</option>
+                                <option value="private" <?= ($resource['visibility'] ?? 'public') === 'private' ? 'selected' : '' ?>>Private (Admin only)</option>
+                                <option value="purchase_required" <?= ($resource['visibility'] ?? 'public') === 'purchase_required' ? 'selected' : '' ?>>Purchase Required</option>
+                                <option value="approval_required" <?= ($resource['visibility'] ?? 'public') === 'approval_required' ? 'selected' : '' ?>>Approval Required</option>
+                            </select>
+                            <span class="form-text small">Control who can see this resource</span>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted">Status</label>
+                            <select name="status" class="form-select">
+                                <option value="published" <?= ($resource['status'] ?? 'published') === 'published' ? 'selected' : '' ?>>Published</option>
+                                <option value="draft" <?= ($resource['status'] ?? 'published') === 'draft' ? 'selected' : '' ?>>Draft</option>
+                                <option value="hidden" <?= ($resource['status'] ?? 'published') === 'hidden' ? 'selected' : '' ?>>Hidden</option>
+                                <option value="archived" <?= ($resource['status'] ?? 'published') === 'archived' ? 'selected' : '' ?>>Archived</option>
+                            </select>
+                            <span class="form-text small">Resource publication status</span>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted">Display Order</label>
+                            <input type="number" name="display_order" class="form-control" value="<?= (int)($resource['display_order'] ?? 0) ?>">
+                            <span class="form-text small">Lower numbers appear first</span>
+                        </div>
                     </div>
 
                     <div class="d-flex gap-3">
@@ -238,5 +287,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="<?= BASE_URL ?>/assets/js/experience.js?v=5"></script>
 </body>
 </html>

@@ -1,0 +1,9 @@
+# Fallback for servers without rewrites. Apache serves robots.php at this URL.
+# Serve a deployment-specific robots.txt at the domain root for subdirectory installs.
+User-agent: *
+Disallow: /admin/
+Disallow: /config/
+Disallow: /logs/
+Disallow: /uploads/resources/
+Disallow: /uploads/receipts/
+Disallow: /account-recovery.php

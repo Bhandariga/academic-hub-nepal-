@@ -7,6 +7,7 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/auth_check.php';
 
 require_admin();
+require_admin_permission('view_reports');
 
 try {
     // 1. Sales by Campus
@@ -47,7 +48,7 @@ try {
     $total_orders = $pdo->query("SELECT COUNT(*) FROM orders WHERE payment_status = 'PAID'")->fetchColumn();
 
 } catch (Exception $e) {
-    die("Error generating reports: " . $e->getMessage());
+    die("Error generating reports: " . safe_error_message($e));
 }
 ?>
 <!DOCTYPE html>
@@ -60,8 +61,14 @@ try {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <link href="<?= BASE_URL ?>/assets/css/style.css" rel="stylesheet">
+<link href="<?= BASE_URL ?>/assets/css/design-system.css?v=3" rel="stylesheet">
+<link href="<?= BASE_URL ?>/assets/css/experience.css?v=4" rel="stylesheet">
+<link href="<?= BASE_URL ?>/assets/css/studio.css?v=1" rel="stylesheet">
+<link href="<?= BASE_URL ?>/assets/css/platform.css?v=2" rel="stylesheet">
+<script src="<?= BASE_URL ?>/assets/js/theme.js?v=1"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><link href="<?= BASE_URL ?>/assets/css/admin-enterprise.css?v=1" rel="stylesheet"><script src="<?= BASE_URL ?>/assets/js/admin-ui.js?v=1" defer></script>
 </head>
-<body class="bg-light">
+<body class="hub-admin bg-light">
 
 <div class="container-fluid p-0">
     <div class="row g-0">
@@ -201,5 +208,6 @@ try {
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="<?= BASE_URL ?>/assets/js/experience.js?v=5"></script>
 </body>
 </html>

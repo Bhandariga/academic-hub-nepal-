@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+
+    <!-- 1. Homepage -->
+    <url>
+        <loc>http://localhost/Academic%20Hub/</loc>
+        <lastmod>2026-09-24</lastmod>
+        <changefreq>daily</changefreq>
+        <priority>1.0</priority>
+        <image:image>
+            <image:loc>http://localhost/Academic%20Hub/assets/images/og_banner.svg</image:loc>
+            <image:title>AcademicHub Nepal - Tribhuvan University Notes &amp; Projects</image:title>
+        </image:image>
+    </url>
+
+    <!-- 2. Academic Resources Catalog -->
+    <url>
+        <loc>http://localhost/Academic%20Hub/resources.php</loc>
+        <lastmod>2026-09-24</lastmod>
+        <changefreq>daily</changefreq>
+        <priority>0.9</priority>
+    </url>
+
+    <!-- 3. Academic Programs Categories -->
+    <url>
+        <loc>http://localhost/Academic%20Hub/resources.php?program=BBS</loc>
+        <lastmod>2026-09-24</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.85</priority>
+    </url>
+    <url>
+        <loc>http://localhost/Academic%20Hub/resources.php?program=BBA</loc>
+        <lastmod>2026-09-24</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.85</priority>
+    </url>
+    <url>
+        <loc>http://localhost/Academic%20Hub/resources.php?program=Ma In Societies</loc>
+        <lastmod>2026-09-24</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.85</priority>
+    </url>
+    <url>
+        <loc>http://localhost/Academic%20Hub/resources.php?program=MBS</loc>
+        <lastmod>2026-09-24</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.85</priority>
+    </url>
+    <url>
+        <loc>http://localhost/Academic%20Hub/resources.php?program=MBA</loc>
+        <lastmod>2026-09-24</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.85</priority>
+    </url>
+
+    <!-- 4. Campus Specific Collections -->
+    <url>
+        <loc>http://localhost/Academic%20Hub/resources.php?campus=Babai+Campus</loc>
+        <lastmod>2026-09-24</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.80</priority>
+    </url>
+    <url>
+        <loc>http://localhost/Academic%20Hub/resources.php?campus=Gyan+Jyoti+Campus</loc>
+        <lastmod>2026-09-24</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.80</priority>
+    </url>
+    <url>
+        <loc>http://localhost/Academic%20Hub/resources.php?campus=Gorkha+Campus</loc>
+        <lastmod>2026-09-24</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.80</priority>
+    </url>
+
+    <!-- 5. Academic Support Services -->
+    <url>
+        <loc>http://localhost/Academic%20Hub/services.php</loc>
+        <lastmod>2026-09-24</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.80</priority>
+    </url>
+
+    <!-- 6. Our Faculty & Team -->
+    <url>
+        <loc>http://localhost/Academic%20Hub/team.php</loc>
+        <lastmod>2026-09-24</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.75</priority>
+    </url>
+
+    <!-- 7. About & Academic Standards -->
+    <url>
+        <loc>http://localhost/Academic%20Hub/about.php</loc>
+        <lastmod>2026-09-24</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.75</priority>
+    </url>
+
+    <!-- 8. Dynamic Resource Details -->
+    <url>
+        <loc>http://localhost/Academic%20Hub/resource-details.php?id=1</loc>
+        <lastmod>2026-09-24</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.80</priority>
+    </url>
+    <url>
+        <loc>http://localhost/Academic%20Hub/resource-details.php?id=2</loc>
+        <lastmod>2026-09-24</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.80</priority>
+    </url>
+    <url>
+        <loc>http://localhost/Academic%20Hub/resource-details.php?id=3</loc>
+        <lastmod>2026-09-24</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.80</priority>
+    </url>
+    <url>
+        <loc>http://localhost/Academic%20Hub/resource-details.php?id=4</loc>
+        <lastmod>2026-09-24</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.80</priority>
+    </url>
+    <url>
+        <loc>http://localhost/Academic%20Hub/resource-details.php?id=5</loc>
+        <lastmod>2026-09-24</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.80</priority>
+    </url>
+    <url>
+        <loc>http://localhost/Academic%20Hub/resource-details.php?id=6</loc>
+        <lastmod>2026-09-24</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.80</priority>
+    </url>
+    <url>
+        <loc>http://localhost/Academic%20Hub/resource-details.php?id=7</loc>
+        <lastmod>2026-09-24</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.80</priority>
+    </url>
+    <url>
+        <loc>http://localhost/Academic%20Hub/resource-details.php?id=8</loc>
+        <lastmod>2026-09-24</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.80</priority>
+    </url>
+
+</urlset>

@@ -52,7 +52,7 @@ try {
     }
 
     // Admins can inspect and download any file for QA verification
-    if (!$order && is_admin() && $resource_id > 0) {
+    if (!$order && admin_has_permission('manage_resources') && $resource_id > 0) {
         $stmt_admin = $pdo->prepare("SELECT id as resource_id, title, file_path, file_format FROM resources WHERE id = :id LIMIT 1");
         $stmt_admin->execute([':id' => $resource_id]);
         $res = $stmt_admin->fetch();
@@ -77,14 +77,14 @@ try {
     $realFileName = basename($order['file_path']);
     $fullFilePath = RESOURCE_FILE_DIR . $realFileName;
 
-    // If file missing on disk, create standard demo sample payload dynamically
-    if (!file_exists($fullFilePath)) {
-        if (!file_exists(RESOURCE_FILE_DIR)) {
-            mkdir(RESOURCE_FILE_DIR, 0777, true);
-        }
-        $dummyContent = "%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R/Resources<<>>>>endobj\nxref\n0 4\n0000000000 65535 f\n0000000009 00000 n\n0000000052 00000 n\n0000000101 00000 n\ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n178\n%%EOF";
-        file_put_contents($fullFilePath, $dummyContent);
+    $root = realpath(RESOURCE_FILE_DIR);
+    $resolved = realpath($fullFilePath);
+    if (!$root || !$resolved || !is_file($resolved) || !is_readable($resolved)
+        || strncmp($resolved, $root . DIRECTORY_SEPARATOR, strlen($root) + 1) !== 0) {
+        http_response_code(404);
+        exit('This resource is temporarily unavailable. Please contact support.');
     }
+    $fullFilePath = $resolved;
 
     // Log the download into downloads table
     $log_stmt = $pdo->prepare("
@@ -124,14 +124,17 @@ try {
     header('Content-Disposition: attachment; filename="' . $downloadFileName . '"');
     header('Content-Transfer-Encoding: binary');
     header('Expires: 0');
-    header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
-    header('Pragma: public');
+    header('Cache-Control: private, no-store');
+    header('Pragma: no-cache');
     header('Content-Length: ' . filesize($fullFilePath));
 
     // Stream file
+    session_write_close();
     readfile($fullFilePath);
     exit;
 
 } catch (Exception $e) {
-    die("Download processing error: " . $e->getMessage());
+    error_log($e->getMessage());
+    http_response_code(500);
+    exit('Download unavailable. Please try again later.');
 }
